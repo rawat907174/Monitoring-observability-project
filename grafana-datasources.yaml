@@ -9,12 +9,12 @@ data:
   prometheus.yaml: |
     apiVersion: 1
     datasources:
-      - name: Prometheus
-        uid: prometheus
+      - name: Prometheus POC
+        uid: prometheus-poc
         type: prometheus
         access: proxy
         url: http://mon-kube-prometheus-stack-prometheus.monitoring.svc:9090
-        isDefault: true
+        isDefault: false
   loki.yaml: |
     apiVersion: 1
     datasources:
@@ -30,9 +30,9 @@ data:
         uid: tempo
         type: tempo
         access: proxy
-        url: http://tempo.monitoring.svc:3200   # <-- change to 3200
+        url: http://tempo.monitoring.svc:3200
         jsonData:
           tracesToLogs:
             datasourceUid: loki
           tracesToMetrics:
-            datasourceUid: prometheus
+            datasourceUid: prometheus-poc
