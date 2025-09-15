@@ -1,5 +1,4 @@
-Set-Location C:\Users\bbdnet10280\monitoring-POC
-Set-Content -Path .\README.md -Value @'
+
 # Monitoring POC — Spring Boot + OTel + Tempo + Loki + Prometheus/Grafana/Alertmanager (kind)
 
 > Windows PowerShell steps (no file blobs, just commands).
