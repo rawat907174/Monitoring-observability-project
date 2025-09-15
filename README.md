@@ -1,5 +1,5 @@
 
-# Monitoring POC — Spring Boot + OTel + Tempo + Loki + Prometheus/Grafana/Alertmanager (kind)
+# Monitoring POC — Spring Boot + OTel + Tempo + Loki + Prometheus/Grafana/Alertmanager
 
 > Windows PowerShell steps (no file blobs, just commands).
 
