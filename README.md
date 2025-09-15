@@ -136,6 +136,5 @@ notepad .\README.md
 - Enable the agent’s logback appender: `OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED=true`
 - Or add a simple `logback-spring.xml` to include `trace_id`/`span_id` in log lines for easy pivoting in Grafana.
 
-'@
-notepad .\README.md
+
 
