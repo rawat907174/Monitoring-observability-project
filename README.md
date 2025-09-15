@@ -91,3 +91,51 @@ Set-Content -Path .\README.md -Value @'
 - `kind delete cluster --name monitoring-demo-rushi`
 '@
 notepad .\README.md
+
+
+## HOW the integration is working
+
+### Traces (App → Collector → Tempo)
+- The **OpenTelemetry Java agent** is injected at runtime by the container:
+  - `JAVA_TOOL_OPTIONS=-javaagent:/otel-javaagent.jar`
+- The app sends traces to the **Collector** using the OTLP HTTP endpoint:
+  - `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-opentelemetry-collector.monitoring.svc.cluster.local:4318`
+  - `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`
+- The **Collector** has OTLP **receivers** (`grpc` + `http`) enabled and a **pipeline** that **exports** to Tempo via OTLP/HTTP (`:4318`).
+- Result: **push** path — App → Collector → Tempo (no code changes needed).
+
+### Metrics (Prometheus → App)
+- Spring Boot exposes **Actuator metrics** at `/actuator/prometheus`.
+- A `ServiceMonitor` (in `monitoring`) tells **Prometheus Operator** how to scrape:
+  - Selects the `spring-demo` Service in namespace `app`, path `/actuator/prometheus`.
+  - Label `release: mon` matches your Helm release.
+- We set the agent to **not** export metrics (`OTEL_METRICS_EXPORTER=none`), to avoid duplication.
+- Result: **pull** path — Prometheus scrapes metrics directly from the app.
+
+### Logs (Promtail → Loki)
+- **Promtail** (DaemonSet) tails Kubernetes container logs from `/var/log/containers`, adds labels (like `namespace`, `pod`, `app`), and **pushes** entries to **Loki**.
+- Your pod’s label `app: spring-demo` enables queries like `{app="spring-demo"}` in Grafana.
+- No app changes required for basic log shipping.
+
+### Grafana datasources (how the UI talks to backends)
+- Provisioned via a ConfigMap (`grafana-datasources`) and reloaded by restarting Grafana:
+  - Prometheus → `http://mon-kube-prometheus-stack-prometheus.monitoring.svc:9090`
+  - Loki → `http://loki.monitoring.svc:3100`
+  - **Tempo → `http://tempo.monitoring.svc:3200`** (Tempo’s HTTP query port)
+
+### Who dials whom (at a glance)
+- **Push:** App → Collector, Collector → Tempo, Promtail → Loki
+- **Pull:** Prometheus → App, Grafana → (Prometheus / Loki / Tempo)
+
+### Useful queries
+- **Tempo (TraceQL):** `{ resource.service.name = "spring-demo" }`
+- **Loki (LogQL):** `{app="spring-demo"}`
+- **Prometheus:** `http_server_requests_seconds_count{service="spring-demo"}`
+
+### Optional: trace ↔ log correlation
+- Enable the agent’s logback appender: `OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED=true`
+- Or add a simple `logback-spring.xml` to include `trace_id`/`span_id` in log lines for easy pivoting in Grafana.
+
+'@
+notepad .\README.md
+
