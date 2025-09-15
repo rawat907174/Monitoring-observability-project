@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-demo
+  namespace: app
+  labels:
+    app: spring-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-demo
+  template:
+    metadata:
+      labels:
+        app: spring-demo
+    spec:
+      containers:
+        - name: app
+          image: spring-demo:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: spring-demo
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-opentelemetry-collector.monitoring.svc.cluster.local:4318
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.namespace=app,service.version=1.0.0
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-demo
+  namespace: app
+  labels:
+    app: spring-demo
+spec:
+  selector:
+    app: spring-demo
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+# Prometheus Operator ServiceMonitor to scrape /actuator/prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spring-demo
+  namespace: monitoring
+  labels:
+    release: mon  # must match your kube-prometheus-stack release name
+spec:
+  selector:
+    matchLabels:
+      app: spring-demo
+  namespaceSelector:
+    matchNames:
+      - app
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s

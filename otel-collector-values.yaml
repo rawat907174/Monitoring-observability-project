@@ -1,0 +1,33 @@
+mode: deployment
+replicaCount: 1
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: 0.103.1
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc: {}
+        http: {}
+  processors:
+    batch: {}
+  exporters:
+    # export to Tempo via OTLP/HTTP (4318) for simplicity
+    otlphttp:
+      endpoint: http://tempo.monitoring.svc.cluster.local:4318
+  extensions:
+    health_check:
+      endpoint: 0.0.0.0:13133
+  service:
+    extensions: [health_check]
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [otlphttp]
+    telemetry:
+      logs:
+        level: info
+      metrics:
+        # move off 8888 to avoid "address already in use"
+        address: 0.0.0.0:8889

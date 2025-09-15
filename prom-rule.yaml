@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: spring-demo-alerts
+  namespace: monitoring
+  labels:
+    release: mon   # must match your kube-prometheus-stack release name
+spec:
+  groups:
+    - name: spring-demo.rules
+      rules:
+        - alert: SpringAppHighErrorRate
+          expr: sum(rate(http_server_requests_seconds_count{namespace="app",service="spring-demo",status=~"5.."}[2m])) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High 5xx rate in spring-demo"
+            description: "More than 0.05 req/s of 5xx over 2m for service spring-demo."
+        - alert: AlwaysFiringDemo
+          expr: vector(1)
+          for: 1m
+          labels:
+            severity: info
+          annotations:
+            summary: "Always Firing (demo)"
+            description: "This alert always fires to test Alertmanager routing."
